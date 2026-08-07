@@ -34,6 +34,9 @@
 
 ---
 
+<img width="1110" height="711" alt="image" src="https://github.com/user-attachments/assets/6e25140a-b0f4-4cd3-b9f9-175ebbe0046c" />
+
+
 ## 🏗️ Estructura del Proyecto
 
 ```text
