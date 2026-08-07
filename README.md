@@ -11,7 +11,7 @@
 ## 👨‍💻 Desarrollador & Créditos
 
 - **Nombre**: Adelys Alberto Belén
-- **GitHub**: [@adelysalberto](https://github.com/adelysalberto)
+- **GitHub**: [@AdelysAlberto](https://github.com/AdelysAlberto)
 - **LinkedIn**: [https://www.linkedin.com/in/adelysalberto](https://www.linkedin.com/in/adelysalberto)
 - **Licencia**: Open Source (Licencia MIT)
 
@@ -42,6 +42,7 @@
 ```text
 check-ports/
 ├── main.py                     # Punto de entrada principal (QApplication + MainWindow)
+├── install.sh                  # Script de instalación automática de 1 línea
 ├── README.md                   # Documentación principal del proyecto y créditos Open Source
 ├── walkthrough.md              # Guía de implementación y pruebas realizadas
 ├── data/
@@ -76,9 +77,26 @@ check-ports/
 
 ## ⚙️ Instalación y Uso
 
-### 1. Clonar o Navegar al Directorio
+### ⚡ Instalación Rápida en 1 Línea (Sin clonar manualmente)
+Ejecuta el siguiente comando en tu terminal (Linux / macOS):
+
 ```bash
-git clone https://github.com/adelysalberto/check-ports.git
+curl -fsSL https://raw.githubusercontent.com/AdelysAlberto/check-ports/main/install.sh | sh
+```
+
+> Al finalizar la instalación, podrás iniciar la aplicación simplemente escribiendo:
+> ```bash
+> check-ports
+> ```
+> O buscándola directamente en el menú de aplicaciones de tu sistema.
+
+---
+
+## 🛠️ Instalación Manual (Desarrollo)
+
+### 1. Clonar el Repositorio
+```bash
+git clone git@github.com:AdelysAlberto/check-ports.git
 cd check-ports
 ```
 
