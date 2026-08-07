@@ -20,6 +20,21 @@ from src.ui.styles import apply_theme
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ("--update", "-u"):
+        print("🔄 Comprobando y descargando la última versión de CheckPorts...")
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        import subprocess
+        try:
+            res = subprocess.run(["git", "pull"], cwd=app_dir, capture_output=True, text=True)
+            if "Already up to date" in res.stdout or "Ya está actualizado" in res.stdout:
+                print("✅ CheckPorts ya está en la versión más reciente.")
+            else:
+                print(res.stdout)
+                print("✅ CheckPorts se ha actualizado exitosamente.")
+        except Exception as e:
+            print(f"❌ Error al actualizar CheckPorts: {e}")
+        sys.exit(0)
+
     app = QApplication(sys.argv)
     apply_theme(app)
 
