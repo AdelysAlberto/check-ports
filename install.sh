@@ -34,11 +34,11 @@ fi
 # 3. Crear entorno virtual (.venv) e instalar dependencias
 echo "🐍 Configurando entorno virtual Python..."
 if [ ! -d ".venv" ]; then
-    python3 -m venv .venv || python3 -m venv --without-pip .venv
+    python3 -m venv --without-pip .venv 2>/dev/null || python3 -m venv .venv 2>/dev/null
 fi
 
 if [ ! -f ".venv/bin/pip" ]; then
-    curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3
+    curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3 >/dev/null 2>&1
 fi
 
 echo "📥 Instalando dependencias (PyQt5, psutil)..."
