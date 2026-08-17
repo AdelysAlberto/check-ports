@@ -1,11 +1,8 @@
-"""
-Scanner Module
-Inspecciona los sockets y puertos de red activos en el sistema Ubuntu mediante psutil.
-"""
-
+import platform
+import subprocess
 import socket
 import psutil
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 from src.models.port_model import ProcessDetail, PortInfo
 from src.utils.result import Result
 
@@ -31,7 +28,7 @@ def _get_process_detail(pid: int) -> Optional[ProcessDetail]:
         try:
             exe_path = proc.exe() or "N/A"
         except (psutil.AccessDenied, psutil.NoSuchProcess):
-            exe_path = "Acceso Denegado (Requiere sudo)"
+            exe_path = "Acceso Denegado (Requiere privilegios)"
 
         try:
             cpu_percent = proc.cpu_percent(interval=0.0)
@@ -54,11 +51,94 @@ def _get_process_detail(pid: int) -> Optional[ProcessDetail]:
         return None
 
 
+def _scan_via_lsof() -> List[dict]:
+    """
+    Escaneo nativo usando 'lsof' (ideal para macOS sin privilegios root).
+    Captura sockets TCP en LISTEN y UDP activos.
+    """
+    scanned_list: List[dict] = []
+    seen_keys: Set[Tuple[int, str, Optional[int]]] = set()
+
+    try:
+        cmd = ["lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-iUDP"]
+        output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True)
+    except Exception:
+        return []
+
+    lines = output.strip().splitlines()
+    if len(lines) <= 1:
+        return []
+
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) < 9:
+            continue
+
+        try:
+            pid = int(parts[1])
+        except ValueError:
+            pid = None
+
+        protocol_raw = parts[4].upper()
+        name_col = parts[8] if len(parts) > 8 else ""
+
+        # Determinar protocolo
+        protocol = "TCP" if "TCP" in line.upper() or "TCP" in protocol_raw else "UDP"
+        status = "LISTEN" if protocol == "TCP" else "UDP"
+
+        # Extraer dirección y puerto desde la columna NAME (ej: *:7000, 127.0.0.1:3000, *:5353)
+        if "->" in name_col:
+            # Conexión establecida o punto a punto (ignorar o tomar origen)
+            target = name_col.split("->")[0]
+        else:
+            target = name_col
+
+        if ":" not in target:
+            continue
+
+        ip_part, port_part = target.rsplit(":", 1)
+        if port_part == "*":
+            continue
+
+        try:
+            port = int(port_part)
+        except ValueError:
+            continue
+
+        ip_address = ip_part if ip_part != "*" else "0.0.0.0"
+
+        key = (port, protocol, pid)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+
+        proc_detail = _get_process_detail(pid) if pid else None
+
+        scanned_list.append({
+            "port": port,
+            "protocol": protocol,
+            "status": status,
+            "ip_address": ip_address,
+            "process": proc_detail
+        })
+
+    return scanned_list
+
+
 def scan_active_ports() -> Result[List[dict], str]:
     """
-    Escanea todos los puertos TCP y UDP en escucha o activos del sistema Ubuntu.
-    Retorna una lista de diccionarios con la información básica detectada por el SO.
+    Escanea todos los puertos TCP y UDP en escucha o activos del sistema (Linux / macOS).
+    Usa psutil y recurre automáticamente a lsof en macOS si psutil requiere permisos root.
     """
+    # En macOS, intentar primero con lsof o fallback si psutil lanza AccessDenied
+    is_macos = platform.system() == "Darwin"
+
+    if is_macos:
+        lsof_results = _scan_via_lsof()
+        if lsof_results:
+            lsof_results.sort(key=lambda x: x["port"])
+            return Result.ok(lsof_results)
+
     try:
         connections = psutil.net_connections(kind='inet')
         scanned_list: List[dict] = []
@@ -77,7 +157,6 @@ def scan_active_ports() -> Result[List[dict], str]:
             protocol = "TCP" if conn.type == socket.SOCK_STREAM else "UDP"
             status = conn.status if conn.status else "UDP"
 
-            # Clave única para evitar duplicados idénticos
             key = (port, protocol, conn.pid)
             if key in seen_keys:
                 continue
@@ -93,11 +172,16 @@ def scan_active_ports() -> Result[List[dict], str]:
                 "process": proc_detail
             })
 
-        # Ordenar por número de puerto
         scanned_list.sort(key=lambda x: x["port"])
         return Result.ok(scanned_list)
 
-    except PermissionError:
-        return Result.fail("Permisos insuficientes para inspeccionar las conexiones del sistema. Ejecuta la app con privilegios.")
+    except (PermissionError, psutil.AccessDenied):
+        # Fallback secundario a lsof
+        lsof_fallback = _scan_via_lsof()
+        if lsof_fallback:
+            lsof_fallback.sort(key=lambda x: x["port"])
+            return Result.ok(lsof_fallback)
+        return Result.fail("Permisos insuficientes para inspeccionar las conexiones. Ejecuta la app como administrador o activa el botón Sudo.")
     except Exception as e:
         return Result.fail(f"Error al escanear los puertos del sistema: {str(e)}")
+

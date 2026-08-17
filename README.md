@@ -123,6 +123,19 @@ pip install PyQt5 psutil
 
 ---
 
+## 🏷️ Versionado y Releases
+
+Para generar una nueva versión y publicarla en GitHub:
+
+```bash
+./release.sh 1.0.1 "Correcciones de compatibilidad y optimización"
+git push origin main --tags
+```
+
+CheckPorts verificará automáticamente la disponibilidad de nuevas versiones en GitHub y mostrará el botón **`🚀 Actualizar a vX.X.X`** en la barra superior.
+
+---
+
 ## 🔒 Seguridad y Privilegios
 
 La aplicación implementa el patrón **Critical PID Shield** en `src/core/process_manager.py`:

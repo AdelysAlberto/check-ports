@@ -8,7 +8,7 @@ DARK_THEME_QSS = """
 QMainWindow, QDialog, QMessageBox {
     background-color: #1e293b;
     color: #ffffff;
-    font-family: 'Ubuntu', 'Inter', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Ubuntu', 'Inter', sans-serif;
     font-size: 13px;
 }
 
