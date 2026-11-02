@@ -1,4 +1,6 @@
+import os
 import platform
+import shutil
 import subprocess
 import socket
 import psutil
@@ -51,6 +53,20 @@ def _get_process_detail(pid: int) -> Optional[ProcessDetail]:
         return None
 
 
+def _resolve_lsof() -> Optional[str]:
+    """
+    Resuelve la ruta del binario lsof. En macOS vive en /usr/sbin, ausente del
+    PATH cuando la app se lanza desde Finder o launchd con entorno reducido.
+    """
+    found = shutil.which("lsof")
+    if found:
+        return found
+    for candidate in ("/usr/sbin/lsof", "/sbin/lsof", "/usr/bin/lsof"):
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
 def _scan_via_lsof() -> List[dict]:
     """
     Escaneo nativo usando 'lsof' (ideal para macOS sin privilegios root).
@@ -59,8 +75,12 @@ def _scan_via_lsof() -> List[dict]:
     scanned_list: List[dict] = []
     seen_keys: Set[Tuple[int, str, Optional[int]]] = set()
 
+    lsof_bin = _resolve_lsof()
+    if not lsof_bin:
+        return []
+
     try:
-        cmd = ["lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-iUDP"]
+        cmd = [lsof_bin, "-nP", "-iTCP", "-sTCP:LISTEN", "-iUDP"]
         output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True)
     except Exception:
         return []
